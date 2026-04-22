@@ -1,13 +1,12 @@
-import UploadSection from "../components/UploadSection";
-import ProcessingTimeline from "../components/ProcessingTimeline";
-import ExtractionSummary from "../components/ExtractionSummary";
+import StrategicAdvisor from "../components/StrategicAdvisor";
+import RevenueDashboard from "../components/RevenueDashboard";
 
-export default function DataPage() {
+export default function Insight() {
   return (
     <>
       {/* Header */}
       <header className="flex justify-between items-center mb-10">
-        <h1 className="text-[32px] font-extrabold text-white">Data</h1>
+        <h1 className="text-[32px] font-extrabold text-white">Insight</h1>
         <div className="flex items-center space-x-6">
           {/* Live Sync Indicator */}
           <div className="flex items-center space-x-2 text-sm text-[#34D399]">
@@ -28,19 +27,21 @@ export default function DataPage() {
         </div>
       </header>
 
-      {/* Data Extract Layout Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 pb-3">
-        {/* Left Column: Upload Options */}
-        <div className="xl:col-span-4">
-          <UploadSection />
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 h-auto min-h-[calc(100vh-180px)]">
+        
+        {/* Left Column: Strategic Advisor Chat */}
+        <div className="xl:col-span-4 h-full min-h-[650px]">
+          <StrategicAdvisor />
         </div>
 
-        {/* Right Column: AI Log Timeline & Summary */}
-        <div className="xl:col-span-8 flex flex-col h-full">
-          <ProcessingTimeline />
-          <ExtractionSummary />
+        {/* Right Column: Insight Dashboard */}
+        <div className="xl:col-span-8 h-full">
+          <RevenueDashboard />
         </div>
+
       </div>
+      <div className="h-5 w-full flex-shrink-0"></div>
     </>
   );
 }
