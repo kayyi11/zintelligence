@@ -1,13 +1,12 @@
-import UploadSection from '../components/UploadSection';
-import ProcessingTimeline from '../components/ProcessingTimeline';
-import ExtractionSummary from '../components/ExtractionSummary';
+import DataStats from '../components/DataStats';
+import EditableDataTable from '../components/EditableDataTable';
 
-export default function DataPage() {
+export default function DataWorkspace() {
   return (
     <>
       {/* Header */}
       <header className="flex justify-between items-center mb-10">
-        <h1 className="text-[32px] font-extrabold text-white">Data</h1>
+        <h1 className="text-[32px] font-extrabold text-white">Data Workspace</h1>
         <div className="flex items-center space-x-6">
           {/* Live Sync Indicator */}
           <div className="flex items-center space-x-2 text-sm text-[#34D399]">
@@ -26,20 +25,11 @@ export default function DataPage() {
         </div>
       </header>
 
-      {/* Data Extract Layout Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 pb-3">
-        
-        {/* Left Column: Upload Options */}
-        <div className="xl:col-span-4">
-          <UploadSection />
-        </div>
-
-        {/* Right Column: AI Log Timeline & Summary */}
-        <div className="xl:col-span-8 flex flex-col h-full">
-          <ProcessingTimeline />
-          <ExtractionSummary />
-        </div>
-
+      {/* Main Content Area */}
+      <DataStats />
+      <div className="mb-6">
+         <h2 className="text-2xl font-bold text-white mb-4">Table Editor</h2>
+         <EditableDataTable />
       </div>
     </>
   );
