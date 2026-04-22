@@ -12,12 +12,16 @@ export default function StrategicAdvisor() {
 
   const messagesEndRef = useRef(null);
 
+  // Function to smoothly scroll the messages container to the bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Effect to trigger scroll only when new messages are added
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > 1) {
+      scrollToBottom();
+    }
   }, [messages]);
 
   const handleSend = () => {
@@ -31,14 +35,16 @@ export default function StrategicAdvisor() {
 
   return (
     <div className="bg-[#1F2937] rounded-xl border border-[#7F92BB]/30 shadow-xl flex flex-col h-full overflow-hidden">
-      {/* Header */}
+      {/* Header Section */}
       <div className="p-6 border-b border-[#7F92BB]/20 bg-[#1F2937] z-10 relative">
         <h2 className="text-xl font-bold text-white tracking-wide">
           Strategic Advisor
         </h2>
       </div>
 
+      {/* Chat History Container */}
       <div className="flex-1 relative min-h-[300px]">
+        {/* Using absolute positioning to contain the overflow within the parent height */}
         <div className="absolute inset-0 p-6 overflow-y-auto space-y-4 scroll-smooth">
           {messages.map((msg) => (
             <div
@@ -56,7 +62,7 @@ export default function StrategicAdvisor() {
               </div>
             </div>
           ))}
-          {/* Auto-scroll anchor */}
+          {/* Invisible anchor element to serve as the scroll target */}
           <div ref={messagesEndRef} className="h-1" />
         </div>
       </div>
@@ -70,6 +76,7 @@ export default function StrategicAdvisor() {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Ask anything..."
+            autoComplete="off" // Disables browser autofill to prevent focus triggers
             className="w-full bg-[#374151] border border-[#7F92BB]/30 rounded-xl py-3.5 pl-4 pr-14 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#8B5CF6] transition-colors"
           />
           <button

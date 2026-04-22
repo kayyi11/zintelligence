@@ -10,7 +10,7 @@ export default function QuickActions() {
   // 1. Content for the Smart Draft text area
   const actionTemplates = {
     supplier: {
-      content: 'Subject: Urgent: Price Renegotiation Discussion\n\nDear Supplier,\n\nBased on recent market fluctuations and our internal AI cost analysis, we would like to discuss adjusting our current chicken supply contract. Our projected order volume remains stable, but we need to optimize our margins.\n\nLet me know when you are available for a quick call.\n\nBest regards,\nUM-Pulse Management'
+      content: 'Subject: Urgent: Price Renegotiation Discussion\n\nDear Supplier,\n\nBased on recent market fluctuations and our internal AI cost analysis, we would like to discuss adjusting our current chicken supply contract. Our projected order volume remains stable, but we need to optimize our margins.\n\nLet me know when you are available for a quick call.\n\nBest regards,\nXXX Management'
     },
     whatsapp: {
       content: 'Hey Team! 🚀\n\nPlease be informed that starting tomorrow, the price for Chicken Rice will be adjusted by +RM0.50. \n\nThe POS system will be automatically updated at midnight. Please ensure all physical menu boards are updated before the morning shift.\n\nThanks!'
