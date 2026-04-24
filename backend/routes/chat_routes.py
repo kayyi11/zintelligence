@@ -1,27 +1,50 @@
-from flask import Blueprint, request, jsonify
-from services.agents.crew import run_di_analysis
 import traceback
+
+from flask import Blueprint, jsonify, request
+
+from services.agents.crew import run_di_analysis
+from services.agents.tools import set_metrics
+from services.aggregator import run_aggregation
 
 chat_bp = Blueprint('chat', __name__)
 
+
+@chat_bp.route('/aggregate', methods=['POST'])
+def aggregate():
+    body  = request.get_json(silent=True) or {}
+    force = bool(body.get('force', False))
+    try:
+        data, cached = run_aggregation(force=force)
+        return jsonify({"status": "ok", "data": data, "cached": cached})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@chat_bp.route('/metrics', methods=['GET'])
+def metrics():
+    try:
+        data, _ = run_aggregation(force=False)
+        return jsonify({"status": "ok", "data": data})
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @chat_bp.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
-    user_query = data.get('query', 'Check business health')
-    
-    print(f"--- Received query: {user_query} ---") # Debug log
-    
+    body       = request.get_json(silent=True) or {}
+    user_query = body.get('query', 'Check business health')
+
+    print(f"--- Received query: {user_query} ---")
+
     try:
+        metrics_data, _ = run_aggregation(force=False)
+        set_metrics(metrics_data)
+
         result = run_di_analysis(user_query)
-        return jsonify({
-            "status": "success",
-            "output": result
-        })
+        return jsonify({"status": "success", "output": result})
     except Exception as e:
-        # This will print the exact error to your terminal
         print("CRITICAL ERROR IN CREW:")
-        traceback.print_exc() 
-        return jsonify({
-            "status": "error", 
-            "message": str(e)
-        }), 500
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500

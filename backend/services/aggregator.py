@@ -191,14 +191,23 @@ def _compute_metrics() -> dict:
     }
 
 
+# ── Serialisation ─────────────────────────────────────────────────────────────
+
+def _serialize(val):
+    """Recursively convert datetime values to ISO strings for JSON safety."""
+    if isinstance(val, datetime):
+        return val.isoformat()
+    if isinstance(val, dict):
+        return {k: _serialize(v) for k, v in val.items()}
+    if isinstance(val, list):
+        return [_serialize(v) for v in val]
+    return val
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def get_aggregated_metrics(force_refresh: bool = False) -> dict:
-    """
-    Return the pre-aggregated metrics dict.
-    Reads from Firestore cache when fresh (< CACHE_TTL_MINUTES old);
-    otherwise recomputes and persists the new snapshot.
-    """
+    """Return the raw metrics dict (datetimes intact). Used internally by tools."""
     cache_ref = db.collection(_CACHE_COLLECTION).document(_CACHE_DOC_ID)
 
     if not force_refresh:
@@ -212,5 +221,25 @@ def get_aggregated_metrics(force_refresh: bool = False) -> dict:
     metrics['computed_at'] = fs_admin.SERVER_TIMESTAMP
     cache_ref.set(metrics)
 
-    # Re-read so computed_at is a real datetime, not the sentinel.
     return cache_ref.get().to_dict()
+
+
+def run_aggregation(force: bool = False) -> tuple:
+    """
+    Return (metrics_dict, was_cached) where metrics_dict is JSON-serializable.
+    Called by API routes; was_cached=True when the Firestore snapshot was fresh.
+    """
+    cache_ref = db.collection(_CACHE_COLLECTION).document(_CACHE_DOC_ID)
+
+    if not force:
+        snap = cache_ref.get()
+        if snap.exists:
+            data = snap.to_dict()
+            if _is_cache_fresh(data):
+                return _serialize(data), True
+
+    metrics = _compute_metrics()
+    metrics['computed_at'] = fs_admin.SERVER_TIMESTAMP
+    cache_ref.set(metrics)
+
+    return _serialize(cache_ref.get().to_dict()), False
