@@ -74,3 +74,12 @@ export const getOrdersByStatus = (status) =>
 
 export const getListingsByPlatform = (platformId) =>
   queryCollection('productListings', [['platform_id', '==', platformId]]);
+
+export async function fetchMetrics() {
+  const response = await fetch('http://localhost:5000/api/metrics');
+  if (!response.ok) {
+    throw new Error(`Metrics API error: ${response.status}`);
+  }
+  const json = await response.json();
+  return json.data;
+}
