@@ -25,3 +25,11 @@ dist-ssr
 
 .env
 .env.*
+
+.venv/
+.venv311/
+__pycache__/
+*.pyc
+.env
+node_modules/
+dist/
