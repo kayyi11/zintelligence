@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_firebase_firebase__firestore_add_document",
+      "mcp__plugin_firebase_firebase__firestore_create_database",
+      "mcp__plugin_firebase_firebase__firestore_list_databases",
+      "mcp__plugin_firebase_firebase__firebase_get_environment",
+      "Bash(npm install *)",
+      "Bash(node seed.js)"
+    ]
+  }
+}
