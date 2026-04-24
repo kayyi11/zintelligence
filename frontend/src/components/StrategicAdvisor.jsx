@@ -34,34 +34,36 @@ export default function StrategicAdvisor() {
     setIsLoading(true); // Start loading
 
     try {
-      // 2. Send request to Flask Backend
       const response = await fetch("http://localhost:5000/api/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: queryToSend }),
       });
-
+    
       const data = await response.json();
-
-      // 3. Add AI response to screen
+    
       if (data.status === "success") {
         setMessages(prev => [
           ...prev,
           { id: Date.now() + 1, sender: "ai", text: data.output }
         ]);
       } else {
-        throw new Error("Backend error");
+        // Show the error message from the backend
+        setMessages(prev => [
+          ...prev,
+          { 
+            id: Date.now() + 1, 
+            sender: "ai", 
+            text: `Backend error: ${data.message || "Unknown error"}` 
+          }
+        ]);
       }
     } catch (error) {
-      console.error("Connection Error:", error);
+      console.error("Network error:", error);
       setMessages(prev => [
         ...prev,
-        { id: Date.now() + 1, sender: "ai", text: "Sorry, I'm having trouble connecting to the server. Please check if app.py is running." }
+        { id: Date.now() + 1, sender: "ai", text: "Cannot reach the server. Make sure Flask is running on port 5000." }
       ]);
-    } finally {
-      setIsLoading(false); // Stop loading
     }
   };
 
