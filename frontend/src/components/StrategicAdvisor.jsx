@@ -1,3 +1,5 @@
+//frontend/src/components/StrategicAdvisor.jsx
+
 import { useState, useRef, useEffect } from "react";
 
 export default function StrategicAdvisor() {
@@ -37,7 +39,10 @@ export default function StrategicAdvisor() {
       const response = await fetch("http://localhost:5000/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: queryToSend }),
+        body: JSON.stringify({ 
+            query: queryToSend,
+            context: "insight_page" 
+        }),
       });
     
       const data = await response.json();
