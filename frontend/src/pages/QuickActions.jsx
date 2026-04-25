@@ -1,7 +1,6 @@
-import { useState } from 'react';
-import ActionCard from '../components/ActionCard';
-import StatusTracker from '../components/StatusTracker';
-import ProcessingLog from '../components/ProcessingLog';
+import { useState, useEffect } from "react";
+import ActionCard from "../components/ActionCard";
+import StatusTracker from "../components/StatusTracker";
 
 export default function QuickActions() {
   // ==========================================
@@ -107,8 +106,8 @@ export default function QuickActions() {
   const [isExecuting, setIsExecuting] = useState(false);
 
   // Live drafted actions from the Executor agent
-  const [draftedActions, setDraftedActions] = useState(null);
-  const [isDraftsLoading, setIsDraftsLoading] = useState(false);
+  const [draftedActions, setDraftedActions] = useState([]);
+  const [isDraftsLoading, setIsDraftsLoading] = useState(true);
   const [draftsError, setDraftsError] = useState(null);
 
   // ========== NEW: Edit-related state ==========
@@ -184,7 +183,6 @@ export default function QuickActions() {
   const getActiveDraftContent = () => {
     if (isDraftsLoading) return "Loading AI-generated draft...";
     if (draftsError) return draftsError;
-    if (draftedActions === null) return '';
     return editedDrafts[activeDraft] ?? getOriginalContent(activeDraft);
   };
 
@@ -332,8 +330,16 @@ export default function QuickActions() {
                   : "AI Draft"}
             </div>
 
+            {/* Loading skeleton (unchanged) */}
             {isDraftsLoading ? (
-              <ProcessingLog />
+              <div className="w-full h-full flex flex-col space-y-3 pt-2 animate-pulse">
+                <div className="h-3 bg-slate-700 rounded w-3/4"></div>
+                <div className="h-3 bg-slate-700 rounded w-full"></div>
+                <div className="h-3 bg-slate-700 rounded w-5/6"></div>
+                <div className="h-3 bg-slate-700 rounded w-2/3"></div>
+                <div className="h-3 bg-slate-700 rounded w-full"></div>
+                <div className="h-3 bg-slate-700 rounded w-4/5"></div>
+              </div>
             ) : (
               <textarea
                 className={`w-full h-full bg-transparent text-sm leading-relaxed resize-none focus:outline-none ${
@@ -368,14 +374,14 @@ export default function QuickActions() {
               <>
                 <button
                   onClick={handleEdit}
-                  disabled={isDraftsLoading || draftedActions === null || !!draftsError}
+                  disabled={isDraftsLoading || !!draftsError}
                   className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95 shadow-md"
                 >
                   Edit Draft
                 </button>
                 <button
                   onClick={handleReset}
-                  disabled={isDraftsLoading || draftedActions === null || !hasUserEdit}
+                  disabled={isDraftsLoading || !hasUserEdit}
                   className="flex-1 bg-transparent border border-[#7F92BB]/40 hover:border-[#7F92BB] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95"
                 >
                   Reset
@@ -406,7 +412,7 @@ export default function QuickActions() {
           <div className="mt-6 flex justify-center">
             <button
               onClick={handleExecute}
-              disabled={isExecuting || draftedActions === null}
+              disabled={isExecuting || isDraftsLoading}
               className={`w-3/4 flex items-center justify-center space-x-3 text-white py-3.5 rounded-xl font-bold text-base transition-all shadow-[0_4px_15px_-3px_rgba(217,119,6,0.4)] active:scale-95 ${
                 isExecuting || isDraftsLoading
                   ? "bg-[#B45309] cursor-wait opacity-70"
