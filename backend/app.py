@@ -12,3 +12,20 @@ app.register_blueprint(insight_bp, url_prefix='/api') # 2. Register here
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
+# Execution state
+execution_state = {
+    "steps": [
+        {"id": "price_simulate", "title": "Price increase simulated", "subtitle": "+8% profit", "status": "pending"},
+        {"id": "supplier_email", "title": "Supplier email sent", "subtitle": "(Waiting reply)", "status": "pending"},
+        {"id": "price_list", "title": "Price list updated", "subtitle": "(Pending approval)", "status": "pending"},
+        {"id": "team_notify", "title": "Team notified", "subtitle": "(Pending)", "status": "pending"}
+    ],
+    "impact": {
+        "time_saved_seconds": 0,
+        "profit_increase": 0,
+        "actions_completed": 0,
+        "total_actions": 4
+    },
+    "last_updated": None
+}
