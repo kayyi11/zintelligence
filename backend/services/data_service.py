@@ -1,80 +1,60 @@
 # backend/services/data_service.py
-
 from services.firestore_client import db
 
 class DataService:
-    def extract_content_from_file(self, file, file_type):
-        """
-        Simulates AI extraction logic based on system architecture.
-        In a real scenario, this would call Z.AI's GLM or an OCR/STT engine.
-        """
-        filename = file.filename.lower()
-
-        if file_type == 'voice' or filename.endswith(('.m4a', '.mp3', '.wav')):
-            # Simulate Speech-to-Text extraction
-            return [
-                {"item": "Note: Order more Chicken", "price": 0.00, "conf": 85},
-                {"item": "Note: Supplier price hike mentioned", "price": 0.00, "conf": 90}
-            ]
-        
-        elif file_type == 'pdf' or filename.endswith('.pdf'):
-            # Simulate PDF/Invoice Parsing
-            return [
-                {"item": "Bulk Jasmine Rice 50kg", "price": 185.50, "conf": 98},
-                {"item": "Vegetable Oil 5L", "price": 42.00, "conf": 96},
-                {"item": "Service Charge", "price": 5.00, "conf": 99}
-            ]
-            
-        else: # Default (Receipts/Images/Drag-Drop)
-            return [
-                {"item": "Fresh Garlic 1kg", "price": 8.50, "conf": 92},
-                {"item": "Red Onions 2kg", "price": 12.00, "conf": 94}
-            ]
-
-    def get_workspace_stats(self):
+    def get_unified_table_data(self):
         try:
-            # Dynamically count documents in your real collections
-            inventory_ref = db.collection('inventorySnapshots').stream()
-            sales_ref = db.collection('orders').stream()
+            print("Fetching products...")
+            # stream() is efficient for large datasets
             products_ref = db.collection('products').stream()
+            products = {doc.id: doc.to_dict() for doc in products_ref}
             
-            # Convert streams to counts
-            inventory_count = sum(1 for _ in inventory_ref)
-            sales_count = sum(1 for _ in sales_ref)
-            supplier_count = sum(1 for _ in products_ref)
+            print(f"Found {len(products)} products. Fetching orders...")
+            orders_ref = db.collection('orders').stream()
+            orders = [doc.to_dict() for doc in orders_ref]
             
-            return [
-                {"title": "Inventory Data", "records": inventory_count, "confidence": "94%", "color": "text-[#10B981]"},
-                {"title": "Sales Data", "records": sales_count, "confidence": "92%", "color": "text-[#10B981]"},
-                {"title": "Supplier Data", "records": supplier_count, "confidence": "90%", "color": "text-[#10B981]"},
-                {"title": "Performance Data", "records": 12, "confidence": "91%", "color": "text-[#10B981]"}
-            ]
-        except Exception as e:
-            print(f"Stats Error: {e}")
-            return []
-
-    def get_table_data(self):
-        try:
-            # Fetch products from your dataset
-            products_ref = db.collection('products').stream()
-            table_rows = []
-            for doc in products_ref:
-                p = doc.to_dict()
-                table_rows.append({
-                    "id": doc.id,
-                    "item": p.get('name', 'Unknown Item'),
-                    "cat": p.get('category_id', 'General').replace('cat_', '').title(),
-                    "qty": "Check Inventory",
-                    "price": float(p.get('cogs_per_unit', 0)),
-                    "source": "Master DB",
-                    "conf": 95 if p.get('cogs_per_unit') else 40
+            unified_data = []
+            
+            for p_id, p_data in products.items():
+                # Logic: Calculate total units sold for this item from order history
+                # Ensure quantity is cast to int and handle missing keys safely
+                total_sold = sum(
+                    int(o.get('quantity', 0)) 
+                    for o in orders 
+                    if str(o.get('product_id')) == str(p_id)
+                )
+                
+                # Format category string: "cat_electronics" -> "Electronics"
+                raw_category = p_data.get('category_id', 'General')
+                display_category = raw_category.replace('cat_', '').replace('_', ' ').title()
+                
+                unified_data.append({
+                    "id": p_id,
+                    "item": p_data.get('name', 'Unknown'),
+                    "category": display_category,
+                    "unitPrice": float(p_data.get('cogs_per_unit', 0)),
+                    "totalSales": total_sold,
+                    "source": "Receipt/History",
+                    "confidence": 95 if total_sold > 0 else 70,
+                    "status": "Verified" if total_sold > 5 else "Review Needed"
                 })
-            return table_rows
+            
+            print(f"Successfully compiled {len(unified_data)} records for unified table.")
+            return unified_data
+        
         except Exception as e:
-            print(f"Table Error: {e}")
+            # Captures any Firestore or processing errors
+            print(f"❌ BACKEND ERROR: {str(e)}")
             return []
 
-    def update_record(self, doc_id, updated_fields):
-        # Directly update the Firestore document
-        db.collection('products').document(doc_id).update(updated_fields)
-        return True
+    def extract_content_from_file(self, file, file_type):
+        """Simulates AI extraction with specific metadata."""
+        items = 12 if file_type == 'receipt' else 5
+        accuracy = 94.0
+        
+        return {
+            "itemsDetected": items,
+            "highConfidence": items - 2,
+            "lowConfidence": 2,
+            "overallAccuracy": accuracy
+        }

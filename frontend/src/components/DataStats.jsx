@@ -17,6 +17,10 @@ export default function DataStats() {
 
   if (loading) return <div className="h-20 flex items-center justify-center text-slate-500">Updating statistics...</div>;
 
+  if (!Array.isArray(stats)) {
+    return <div className="text-red-400">Error: Stats data format invalid.</div>;
+  }
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
       {stats.map((stat, index) => (
