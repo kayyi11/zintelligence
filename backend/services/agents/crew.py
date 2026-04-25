@@ -91,14 +91,14 @@ def run_di_analysis(user_query, metrics_data=None, event_queue=None):
     emit('detect', 'Scanning inventory risks and business metrics...')
     emit('think', 'Analyzing data to form a strategic recommendation...')
 
-    # Tool-free agents: data is pre-injected in the task, so each agent does
-    # exactly one LLM generation with no ReAct tool-calling loops.
+    # Single tool-free agent: data pre-injected + format instructions in one prompt
+    # = exactly 1 LLM call, which is the minimum possible.
     analyst = Agent(
         role='Business Analyst',
-        goal='Answer business questions using the pre-loaded metrics provided in the task',
+        goal='Answer business questions using pre-loaded metrics and return a formatted response',
         backstory=(
             'Expert in Malaysian e-commerce. You receive structured business data '
-            'and derive concise, actionable insights without needing to call tools.'
+            'and produce a concise, formatted recommendation in one pass.'
         ),
         tools=[],
         llm=llm,
@@ -106,74 +106,41 @@ def run_di_analysis(user_query, metrics_data=None, event_queue=None):
         max_execution_time=60,
         verbose=True,
     )
-    formatter = Agent(
-        role='Response Formatter',
-        goal='Reformat raw analysis into the required structured plain-text output',
-        backstory='You convert business analysis into clean, emoji-annotated bullet-point responses.',
-        tools=[],
-        llm=llm,
-        max_iter=1,
-        max_execution_time=45,
-        verbose=True,
-    )
 
-    def after_task1(output):
-        emit('act', 'Formatting the final response...')
+    emit('act', 'Generating response...')
 
     task1 = Task(
         description=(
             f"Here is the current business data:\n\n{context}\n\n"
             f"Answer this question from the business owner: '{user_query}'\n\n"
-            f"Identify: (1) the key risk or finding, "
-            f"(2) why it is happening using the metrics above, "
-            f"(3) one clear recommended action."
+            f"Respond in this EXACT format — no deviations:\n\n"
+            f"[emoji] [one sentence summary of the key finding]\n\n"
+            f"[emoji] What's happening:\n"
+            f"• [specific data point or observation]\n"
+            f"• [another data point if relevant]\n\n"
+            f"[emoji] Recommended action:\n"
+            f"• [one clear, actionable step]\n"
+            f"• [second step if needed]\n\n"
+            f"[emoji] [one sentence expected outcome]\n\n"
+            f"Do you need further clarification?\n\n"
+            f"Rules:\n"
+            f"- Use RM for all currency. Malaysian e-commerce context.\n"
+            f"- Use • (bullet) not * or -\n"
+            f"- No **bold**, no #headers, no markdown\n"
+            f"- Max 6 bullet points total\n"
+            f"- End with exactly: \"Do you need further clarification?\""
         ),
         agent=analyst,
-        expected_output=(
-            "A concise analysis covering the identified risk, its root cause from the metrics, "
-            "and a concrete recommendation."
-        ),
-        max_execution_time=60,
-        callback=after_task1,
-    )
-
-    task2 = Task(
-        description="""
-Rewrite the analysis into this EXACT format — no deviations:
-
-[emoji] [one sentence summary of the key finding]
-
-[emoji] What's happening:
-• [specific data point or observation]
-• [another data point if relevant]
-
-[emoji] Recommended action:
-• [one clear, actionable step]
-• [second step if needed]
-
-[emoji] [one sentence expected outcome]
-
-Do you need further clarification?
-
-Rules:
-- Use RM for all currency. Malaysian e-commerce context.
-- Use • (bullet) not * or -
-- No **bold**, no #headers, no markdown syntax
-- Max 6 bullet points total
-- End with exactly: "Do you need further clarification?"
-        """,
-        agent=formatter,
-        context=[task1],
         expected_output=(
             "Structured plain-text with emojis and • bullets, "
             "ending with 'Do you need further clarification?'"
         ),
-        max_execution_time=45,
+        max_execution_time=60,
     )
 
     crew = Crew(
-        agents=[analyst, formatter],
-        tasks=[task1, task2],
+        agents=[analyst],
+        tasks=[task1],
         process=Process.sequential,
         verbose=True,
     )
