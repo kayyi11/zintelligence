@@ -7,7 +7,6 @@ export default function QuickActions() {
   // DATA MODELS & STATE
   // ==========================================
   
-  // 1. Configuration for the left-side Action Cards
   const actionCardsData = [
     {
       id: 'supplier',
@@ -38,7 +37,6 @@ export default function QuickActions() {
     }
   ];
 
-  // 2. Data for the right-side Tracker
   const trackerSteps = [
     { title: 'Price increase simulated', subtitle: '+8% profit', status: 'completed' },
     { title: 'Supplier email sent', subtitle: '(Waiting reply)', status: 'pending' },
@@ -58,8 +56,13 @@ export default function QuickActions() {
   const [isDraftsLoading, setIsDraftsLoading] = useState(true);
   const [draftsError, setDraftsError] = useState(null);
 
+  // ========== NEW: Edit-related state ==========
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedDrafts, setEditedDrafts] = useState({});    // key: action_id, value: custom text
+  const [editBuffer, setEditBuffer] = useState('');        // temporary value while editing
+
   // ==========================================
-  // FETCH DRAFTED ACTIONS ON MOUNT
+  // FETCH DRAFTED ACTIONS ON MOUNT (unchanged)
   // ==========================================
 
   useEffect(() => {
@@ -87,32 +90,70 @@ export default function QuickActions() {
   }, []);
 
   // ==========================================
-  // HELPERS
+  // HELPERS (unchanged except for edit support)
   // ==========================================
 
-  // Returns the display content for the currently selected draft tab
-  const getActiveDraftContent = () => {
-    if (isDraftsLoading) return 'Loading AI-generated draft...';
-    if (draftsError) return draftsError;
-
-    const draft = draftedActions.find(d => d.action_id === activeDraft);
+  const getOriginalContent = (actionId) => {
+    const draft = draftedActions.find(d => d.action_id === actionId);
     if (!draft) return 'No draft available for this action.';
-
-    // Emails: prepend subject line for readability
     if (draft.action_type === 'email' && draft.subject) {
       return `Subject: ${draft.subject}\n\n${draft.body}`;
     }
-
     return draft.body || 'No content available.';
   };
 
+  // Returns either the user's edited version or the original AI draft
+  const getActiveDraftContent = () => {
+    if (isDraftsLoading) return 'Loading AI-generated draft...';
+    if (draftsError) return draftsError;
+    return editedDrafts[activeDraft] ?? getOriginalContent(activeDraft);
+  };
+
   // ==========================================
-  // EVENT HANDLERS
+  // EDIT / SAVE / CANCEL / RESET HANDLERS
+  // ==========================================
+
+  const handleEdit = () => {
+    setEditBuffer(getActiveDraftContent());
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    setEditedDrafts(prev => ({ ...prev, [activeDraft]: editBuffer }));
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditBuffer('');
+    setIsEditing(false);
+  };
+
+  const handleReset = () => {
+    // Remove edited version for this action
+    setEditedDrafts(prev => {
+      const newDrafts = { ...prev };
+      delete newDrafts[activeDraft];
+      return newDrafts;
+    });
+    setIsEditing(false);
+    setEditBuffer('');
+  };
+
+  // When switching tabs, exit edit mode without saving any changes
+  const handleTabSwitch = (id) => {
+    if (isEditing) {
+      setIsEditing(false);
+      setEditBuffer('');
+    }
+    setActiveDraft(id);
+  };
+
+  // ==========================================
+  // EXECUTE HANDLER (unchanged)
   // ==========================================
 
   const handleExecute = () => {
     setIsExecuting(true);
-    // Simulate API call and loading state
     setTimeout(() => {
       setIsExecuting(false);
       alert('All actions executed successfully!');
@@ -120,16 +161,20 @@ export default function QuickActions() {
   };
 
   // ==========================================
+  // DERIVED FLAGS
+  // ==========================================
+  const hasUserEdit = !!editedDrafts[activeDraft];
+
+  // ==========================================
   // RENDER
   // ==========================================
 
   return (
     <>
-      {/* Header */}
+      {/* Header (unchanged) */}
       <header className="flex justify-between items-center mb-10">
         <h1 className="text-[32px] font-extrabold text-white">Quick Actions</h1>
         <div className="flex items-center space-x-6">
-          {/* Live Sync Indicator */}
           <div className="flex items-center space-x-2 text-sm text-[#34D399]">
             <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#34D399] opacity-75"></span>
@@ -138,11 +183,8 @@ export default function QuickActions() {
             <span>Live Sync</span>
           </div>
           <div className="text-sm text-slate-400">Last updated: 10s ago</div>
-          {/* User Profile Bubble */}
           <div className="flex items-center space-x-3 bg-[#1F2937] px-3 py-1.5 rounded-full border border-[#7F92BB]/30">
-            <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center text-xs font-bold text-white">
-              U
-            </div>
+            <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center text-xs font-bold text-white">U</div>
             <span className="font-medium text-white text-sm pr-2">User</span>
           </div>
         </div>
@@ -150,10 +192,6 @@ export default function QuickActions() {
 
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-auto min-h-[calc(100vh-180px)]">
-        
-        {/* ==========================================
-            TOP ROW
-            ========================================== */}
         
         {/* Top Left: Generated Actions List */}
         <div className="lg:col-span-4 bg-[#121826] rounded-xl border border-[#7F92BB]/30 p-5 flex flex-col shadow-lg">
@@ -170,22 +208,34 @@ export default function QuickActions() {
                 activeBorderClass={card.activeBorderClass}
                 activeBtnClass={card.activeBtnClass}
                 isActive={activeDraft === card.id}
-                onClick={setActiveDraft}
+                onClick={handleTabSwitch}   // changed to our wrapper
               />
             ))}
           </div>
         </div>
 
-        {/* Top Middle: Smart Draft Preview Area */}
+        {/* Top Middle: Smart Draft Preview Area (with edit functionality) */}
         <div className="lg:col-span-5 bg-[#121826] rounded-xl border border-[#7F92BB]/30 p-5 flex flex-col shadow-lg">
-          <h2 className="text-white font-bold text-lg mb-4">Smart Draft Preview</h2>
-          
-          <div className="flex-1 bg-[#1F2937] rounded-xl border border-[#7F92BB]/20 p-5 mb-5 relative overflow-hidden">
+          {/* Header with optional "Edited" badge */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white font-bold text-lg">Smart Draft Preview</h2>
+            {hasUserEdit && !isEditing && (
+              <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400 border border-amber-400/40 px-2 py-0.5 rounded-full">
+                Edited
+              </span>
+            )}
+          </div>
+
+          <div className={`flex-1 bg-[#1F2937] rounded-xl border p-5 mb-5 relative overflow-hidden transition-all ${
+            isEditing
+              ? 'border-[#3B82F6]/60 ring-1 ring-[#3B82F6]/30'
+              : 'border-[#7F92BB]/20'
+          }`}>
             <div className="absolute top-3 right-3 text-[10px] uppercase font-bold tracking-widest text-[#7F92BB]">
-              {isDraftsLoading ? 'Loading...' : 'AI Draft'}
+              {isDraftsLoading ? 'Loading...' : isEditing ? 'Editing' : 'AI Draft'}
             </div>
 
-            {/* Loading skeleton */}
+            {/* Loading skeleton (unchanged) */}
             {isDraftsLoading ? (
               <div className="w-full h-full flex flex-col space-y-3 pt-2 animate-pulse">
                 <div className="h-3 bg-slate-700 rounded w-3/4"></div>
@@ -200,39 +250,59 @@ export default function QuickActions() {
                 className={`w-full h-full bg-transparent text-sm leading-relaxed resize-none focus:outline-none ${
                   draftsError ? 'text-red-400' : 'text-slate-200'
                 }`}
-                value={getActiveDraftContent()}
-                readOnly
+                value={isEditing ? editBuffer : getActiveDraftContent()}
+                readOnly={!isEditing}
+                onChange={e => setEditBuffer(e.target.value)}
+                autoFocus={isEditing}
               />
             )}
           </div>
 
+          {/* Buttons: Show Save/Cancel when editing, else Edit/Reset */}
           <div className="flex space-x-4">
-            <button
-              disabled={isDraftsLoading || !!draftsError}
-              className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95 shadow-md"
-            >
-              Edit Draft
-            </button>
-            <button
-              disabled={isDraftsLoading}
-              className="flex-1 bg-transparent border border-[#7F92BB]/40 hover:border-[#7F92BB] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95"
-            >
-              Reset
-            </button>
+            {isEditing ? (
+              <>
+                <button
+                  onClick={handleSave}
+                  className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95 shadow-md"
+                >
+                  Save Changes
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 bg-transparent border border-[#7F92BB]/40 hover:border-[#7F92BB] hover:bg-white/5 text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleEdit}
+                  disabled={isDraftsLoading || !!draftsError}
+                  className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95 shadow-md"
+                >
+                  Edit Draft
+                </button>
+                <button
+                  onClick={handleReset}
+                  disabled={isDraftsLoading || !hasUserEdit}
+                  className="flex-1 bg-transparent border border-[#7F92BB]/40 hover:border-[#7F92BB] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95"
+                >
+                  Reset
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Top Right: Decision Tracker Panel */}
+        {/* Top Right: Decision Tracker Panel (unchanged) */}
         <div className="lg:col-span-3 bg-[#121826] rounded-xl border border-[#7F92BB]/30 p-5 flex flex-col shadow-lg">
           <h2 className="text-white font-bold text-lg mb-6">Decision Tracker</h2>
           <StatusTracker steps={trackerSteps} />
         </div>
 
-        {/* ==========================================
-            BOTTOM ROW
-            ========================================== */}
-        
-        {/* Bottom Left: Execute Actions CTA */}
+        {/* Bottom Left: Execute Actions CTA (unchanged) */}
         <div className="lg:col-span-5 bg-[#121826] rounded-xl border border-[#7F92BB]/30 p-6 flex flex-col justify-between shadow-lg">
           <div>
             <h2 className="text-white font-bold text-lg mb-2">Execute Actions</h2>
@@ -263,11 +333,10 @@ export default function QuickActions() {
           </div>
         </div>
 
-        {/* Bottom Right: Impact Tracker Stats */}
+        {/* Bottom Right: Impact Tracker Stats (unchanged) */}
         <div className="lg:col-span-7 bg-[#121826] rounded-xl border border-[#7F92BB]/30 p-6 flex flex-col shadow-lg">
           <h2 className="text-white font-bold text-lg mb-5">Impact Tracker</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1">
-            
             <div className="bg-[#1F2937] p-4 rounded-xl border border-[#7F92BB]/20 flex flex-col justify-center relative overflow-hidden">
               <p className="text-slate-400 text-xs font-semibold mb-1">Time Saved</p>
               <div className="text-white font-bold text-2xl">2 <span className="text-sm text-slate-400 font-normal">hours</span></div>
@@ -275,13 +344,11 @@ export default function QuickActions() {
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               </div>
             </div>
-
             <div className="bg-[#1F2937] p-4 rounded-xl border border-[#7F92BB]/20 flex flex-col justify-center">
               <p className="text-slate-400 text-xs font-semibold mb-1">Est. Profit Increase</p>
               <div className="text-[#34D399] font-bold text-2xl">RM200</div>
               <p className="text-xs text-slate-500 mt-1">(estimated)</p>
             </div>
-
             <div className="bg-[#1F2937] p-4 rounded-xl border border-[#7F92BB]/20 flex items-center justify-between">
               <div>
                 <p className="text-slate-400 text-xs font-semibold mb-1">Actions Completed</p>
@@ -296,13 +363,10 @@ export default function QuickActions() {
                 </svg>
               </div>
             </div>
-
           </div>
         </div>
-
       </div>
 
-      {/* Invisible Spacer */}
       <div className="h-5 w-full flex-shrink-0"></div>
     </>
   );
