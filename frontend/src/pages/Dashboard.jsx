@@ -62,8 +62,11 @@ export default function Dashboard() {
 
   // ── Derived values (safe when metrics is null) ─────────────────────────────
 
-  const revenueData = metrics?.daily_revenue?.map((d) => d.revenue) ?? [10, 15, 8, 20, 14, 25, 22, 30, 28];
-  const costData = [20, 18, 22, 16, 25, 20, 28, 24, 26];
+  const revenueData    = metrics?.daily_revenue     ?? [10, 15, 8, 20, 14, 25, 22, 30, 28];
+  const costData       = metrics?.daily_cogs        ?? [20, 18, 22, 16, 25, 20, 28, 24, 26];
+  const netProfitData  = metrics?.daily_net_profit  ?? [5, 8, 4, 12, 7, 14, 11];
+  const netMarginData  = metrics?.daily_net_margin  ?? [15, 18, 12, 20, 16, 22, 19];
+  const returnRateData = metrics?.daily_return_rate ?? [3, 2, 4, 1, 3, 2, 2];
 
   // Revenue widget
   const revenueValue = metrics
@@ -272,7 +275,7 @@ export default function Dashboard() {
           title="Return Rate"
           value={returnRateValue}
           chartType="cost"
-          data={costData}
+          data={returnRateData}
         />
         <TrendWidget
           title="Net Margin"
@@ -280,7 +283,7 @@ export default function Dashboard() {
           statusText={netMarginStatusText}
           statusType={netMarginStatusType}
           chartType="revenue"
-          data={revenueData}
+          data={netMarginData}
         />
         <TrendWidget
           title="Net Profit"
@@ -288,7 +291,7 @@ export default function Dashboard() {
           statusText={revenueStatusText}
           statusType={revenueStatusType}
           chartType="cost"
-          data={revenueData}
+          data={netProfitData}
         />
       </div>
     </>
