@@ -79,7 +79,7 @@ def analyze():
         try:
             metrics_data, _ = run_aggregation(force=False)
             set_metrics(metrics_data)
-            run_di_analysis(user_query, event_queue=event_queue)
+            run_di_analysis(user_query, metrics_data=metrics_data, event_queue=event_queue)
         except Exception as e:
             print("CRITICAL ERROR IN CREW:")
             traceback.print_exc()
