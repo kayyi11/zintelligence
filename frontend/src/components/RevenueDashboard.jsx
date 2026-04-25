@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import RevenueChart from "./RevenueChart";
 import DetailedAnalysisModal from "./DetailedAnalysisModal"; // ✅ Fixed import typo
 
 export default function RevenueDashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("insight");
   const [activeDimension, setActiveDimension] = useState("total"); 
   const [insightData, setInsightData] = useState(null);
@@ -149,7 +151,7 @@ export default function RevenueDashboard() {
                 >
                   {isSimulating ? "Simulating..." : "Simulate Scenario"}
                 </button>
-                <button className="flex-1 border border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10 py-2.5 rounded-lg text-sm font-semibold transition-all">Apply to Actions</button>
+                <button onClick={() => navigate("/actions")} className="flex-1 border border-[#8B5CF6] text-[#8B5CF6] hover:bg-[#8B5CF6]/10 py-2.5 rounded-lg text-sm font-semibold transition-all">Apply to Actions</button>
               </div>
             </div>
 
