@@ -92,3 +92,13 @@ export async function fetchOptimization() {
   const json = await response.json();
   return json.optimization ?? null;
 }
+
+export async function generateReport(prompt, reportType) {
+  const res = await fetch('/api/generate-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, report_type: reportType }),
+  });
+  if (!res.ok) throw new Error('Report generation failed');
+  return res.blob(); // returns PDF blob
+}
