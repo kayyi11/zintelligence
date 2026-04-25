@@ -6,6 +6,7 @@ from routes.chat_routes import chat_bp
 from routes.insight_routes import insight_bp
 from routes.decision_tracker_route import decision_tracker_bp
 from routes.report_routes import report_bp
+from routes.smart_draft_routes import smart_draft_bp
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
@@ -14,11 +15,9 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 # Register blueprints
 app.register_blueprint(chat_bp, url_prefix='/api')
 app.register_blueprint(insight_bp, url_prefix='/api')
-app.register_blueprint(decision_tracker_bp)
+app.register_blueprint(decision_tracker_bp, url_prefix='/api')
 app.register_blueprint(report_bp, url_prefix='/api')
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+app.register_blueprint(smart_draft_bp)
 
 # Execution state
 execution_state = {
@@ -36,3 +35,7 @@ execution_state = {
     },
     "last_updated": None
 }
+
+if __name__ == '__main__':
+    # Running on port 5000 as per project requirements
+    app.run(debug=True, port=5000)

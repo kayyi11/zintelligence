@@ -5,3 +5,4 @@ litellm
 langchain-openai>=0.1.0
 firebase-admin>=6.5.0
 python-dotenv>=1.0.1
+google-genai>=1.0.0
