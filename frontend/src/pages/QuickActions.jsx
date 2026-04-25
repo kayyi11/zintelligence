@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ActionCard from '../components/ActionCard';
 import StatusTracker from '../components/StatusTracker';
 
@@ -7,20 +7,7 @@ export default function QuickActions() {
   // DATA MODELS & STATE
   // ==========================================
   
-  // 1. Content for the Smart Draft text area
-  const actionTemplates = {
-    supplier: {
-      content: 'Subject: Urgent: Price Renegotiation Discussion\n\nDear Supplier,\n\nBased on recent market fluctuations and our internal AI cost analysis, we would like to discuss adjusting our current chicken supply contract. Our projected order volume remains stable, but we need to optimize our margins.\n\nLet me know when you are available for a quick call.\n\nBest regards,\nXXX Management'
-    },
-    whatsapp: {
-      content: 'Hey Team! 🚀\n\nPlease be informed that starting tomorrow, the price for Chicken Rice will be adjusted by +RM0.50. \n\nThe POS system will be automatically updated at midnight. Please ensure all physical menu boards are updated before the morning shift.\n\nThanks!'
-    },
-    pricelist: {
-      content: '[SYSTEM LOG - EXPORT PREVIEW]\n\nGenerating updated PDF price list...\nApplying +RM0.50 margin to "Protein" category...\nRecalculating SST targets...\n\nStatus: Ready for 1-click export.'
-    }
-  };
-
-  // 2. Configuration for the left-side Action Cards
+  // 1. Configuration for the left-side Action Cards
   const actionCardsData = [
     {
       id: 'supplier',
@@ -51,7 +38,7 @@ export default function QuickActions() {
     }
   ];
 
-  // 3. Data for the right-side Tracker
+  // 2. Data for the right-side Tracker
   const trackerSteps = [
     { title: 'Price increase simulated', subtitle: '+8% profit', status: 'completed' },
     { title: 'Supplier email sent', subtitle: '(Waiting reply)', status: 'pending' },
@@ -59,11 +46,70 @@ export default function QuickActions() {
     { title: 'Team notified', subtitle: '(Pending)', status: 'pending' }
   ];
 
-  // Component States
+  // ==========================================
+  // COMPONENT STATE
+  // ==========================================
+
   const [activeDraft, setActiveDraft] = useState('supplier');
   const [isExecuting, setIsExecuting] = useState(false);
 
-  // Execution Handler
+  // Live drafted actions from the Executor agent
+  const [draftedActions, setDraftedActions] = useState([]);
+  const [isDraftsLoading, setIsDraftsLoading] = useState(true);
+  const [draftsError, setDraftsError] = useState(null);
+
+  // ==========================================
+  // FETCH DRAFTED ACTIONS ON MOUNT
+  // ==========================================
+
+  useEffect(() => {
+    const fetchDraftedActions = async () => {
+      setIsDraftsLoading(true);
+      setDraftsError(null);
+      try {
+        const response = await fetch('http://localhost:5000/api/draft-actions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (!response.ok) throw new Error(`Server error: ${response.status}`);
+        const data = await response.json();
+        setDraftedActions(data.drafted_actions || []);
+      } catch (err) {
+        console.error('Failed to fetch drafted actions:', err);
+        setDraftsError('Failed to load AI drafts. Please refresh the page.');
+      } finally {
+        setIsDraftsLoading(false);
+      }
+    };
+
+    fetchDraftedActions();
+  }, []);
+
+  // ==========================================
+  // HELPERS
+  // ==========================================
+
+  // Returns the display content for the currently selected draft tab
+  const getActiveDraftContent = () => {
+    if (isDraftsLoading) return 'Loading AI-generated draft...';
+    if (draftsError) return draftsError;
+
+    const draft = draftedActions.find(d => d.action_id === activeDraft);
+    if (!draft) return 'No draft available for this action.';
+
+    // Emails: prepend subject line for readability
+    if (draft.action_type === 'email' && draft.subject) {
+      return `Subject: ${draft.subject}\n\n${draft.body}`;
+    }
+
+    return draft.body || 'No content available.';
+  };
+
+  // ==========================================
+  // EVENT HANDLERS
+  // ==========================================
+
   const handleExecute = () => {
     setIsExecuting(true);
     // Simulate API call and loading state
@@ -72,6 +118,10 @@ export default function QuickActions() {
       alert('All actions executed successfully!');
     }, 2000);
   };
+
+  // ==========================================
+  // RENDER
+  // ==========================================
 
   return (
     <>
@@ -109,7 +159,6 @@ export default function QuickActions() {
         <div className="lg:col-span-4 bg-[#121826] rounded-xl border border-[#7F92BB]/30 p-5 flex flex-col shadow-lg">
           <h2 className="text-white font-bold text-lg mb-4">Generated Actions</h2>
           <div className="space-y-3 flex-1 overflow-y-auto pr-1">
-            {/* Map through the data array to generate ActionCards dynamically */}
             {actionCardsData.map(card => (
               <ActionCard 
                 key={card.id}
@@ -132,19 +181,42 @@ export default function QuickActions() {
           <h2 className="text-white font-bold text-lg mb-4">Smart Draft Preview</h2>
           
           <div className="flex-1 bg-[#1F2937] rounded-xl border border-[#7F92BB]/20 p-5 mb-5 relative overflow-hidden">
-            <div className="absolute top-3 right-3 text-[10px] uppercase font-bold tracking-widest text-[#7F92BB]">AI Draft</div>
-            <textarea 
-              className="w-full h-full bg-transparent text-slate-200 text-sm leading-relaxed resize-none focus:outline-none"
-              value={actionTemplates[activeDraft].content}
-              readOnly
-            />
+            <div className="absolute top-3 right-3 text-[10px] uppercase font-bold tracking-widest text-[#7F92BB]">
+              {isDraftsLoading ? 'Loading...' : 'AI Draft'}
+            </div>
+
+            {/* Loading skeleton */}
+            {isDraftsLoading ? (
+              <div className="w-full h-full flex flex-col space-y-3 pt-2 animate-pulse">
+                <div className="h-3 bg-slate-700 rounded w-3/4"></div>
+                <div className="h-3 bg-slate-700 rounded w-full"></div>
+                <div className="h-3 bg-slate-700 rounded w-5/6"></div>
+                <div className="h-3 bg-slate-700 rounded w-2/3"></div>
+                <div className="h-3 bg-slate-700 rounded w-full"></div>
+                <div className="h-3 bg-slate-700 rounded w-4/5"></div>
+              </div>
+            ) : (
+              <textarea 
+                className={`w-full h-full bg-transparent text-sm leading-relaxed resize-none focus:outline-none ${
+                  draftsError ? 'text-red-400' : 'text-slate-200'
+                }`}
+                value={getActiveDraftContent()}
+                readOnly
+              />
+            )}
           </div>
 
           <div className="flex space-x-4">
-            <button className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95 shadow-md">
+            <button
+              disabled={isDraftsLoading || !!draftsError}
+              className="flex-1 bg-[#3B82F6] hover:bg-[#2563EB] disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95 shadow-md"
+            >
               Edit Draft
             </button>
-            <button className="flex-1 bg-transparent border border-[#7F92BB]/40 hover:border-[#7F92BB] hover:bg-white/5 text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95">
+            <button
+              disabled={isDraftsLoading}
+              className="flex-1 bg-transparent border border-[#7F92BB]/40 hover:border-[#7F92BB] hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed text-white py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-95"
+            >
               Reset
             </button>
           </div>
@@ -153,7 +225,6 @@ export default function QuickActions() {
         {/* Top Right: Decision Tracker Panel */}
         <div className="lg:col-span-3 bg-[#121826] rounded-xl border border-[#7F92BB]/30 p-5 flex flex-col shadow-lg">
           <h2 className="text-white font-bold text-lg mb-6">Decision Tracker</h2>
-          {/* Render the reusable Tracker component */}
           <StatusTracker steps={trackerSteps} />
         </div>
 
@@ -170,8 +241,12 @@ export default function QuickActions() {
           <div className="mt-6 flex justify-center">
             <button 
               onClick={handleExecute}
-              disabled={isExecuting}
-              className={`w-3/4 flex items-center justify-center space-x-3 text-white py-3.5 rounded-xl font-bold text-base transition-all shadow-[0_4px_15px_-3px_rgba(217,119,6,0.4)] active:scale-95 ${isExecuting ? 'bg-[#B45309] cursor-wait' : 'bg-[#D97706] hover:bg-[#B45309]'}`}
+              disabled={isExecuting || isDraftsLoading}
+              className={`w-3/4 flex items-center justify-center space-x-3 text-white py-3.5 rounded-xl font-bold text-base transition-all shadow-[0_4px_15px_-3px_rgba(217,119,6,0.4)] active:scale-95 ${
+                isExecuting || isDraftsLoading
+                  ? 'bg-[#B45309] cursor-wait opacity-70'
+                  : 'bg-[#D97706] hover:bg-[#B45309]'
+              }`}
             >
               {isExecuting ? (
                 <>
