@@ -1,0 +1,36 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt pytest
+
+      - name: Write Firebase credentials
+        run: echo "$CREDS" > majuai-firebase-adminsdk.json
+        env:
+          CREDS: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+
+      - name: Run pipeline tests (Tasks 1-3 + 5; skip live-server Task 4)
+        working-directory: backend
+        env:
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          ZAI_API_BASE: https://api.ilmu.ai/v1
+          ZAI_MODEL_NAME: ilmu-glm-5.1
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pytest tests/test_pipeline.py -k "not TestTask4APIEndpoints" -v --tb=short
