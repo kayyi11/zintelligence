@@ -1,36 +1,116 @@
+//frontend/src/components/StrategicAdvisor.jsx
+
 import { useState, useRef, useEffect } from "react";
+
+function formatAiText(text) {
+  return text
+    .replace(/#{1,6}\s+/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/`{1,3}[^`]*`{1,3}/g, (m) => m.replace(/`/g, ''))
+    .replace(/^[-*+]\s+/gm, '• ')
+    .replace(/^\d+\.\s+/gm, '')
+    .replace(/^---+$/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function AiMessage({ text }) {
+  const lines = formatAiText(text).split('\n');
+  return (
+    <div className="space-y-1.5">
+      {lines.map((line, i) => {
+        if (!line.trim()) return <div key={i} className="h-1.5" />;
+        if (line.startsWith('•')) {
+          return (
+            <div key={i} className="flex gap-2 pl-1">
+              <span className="text-[#A78BFA] mt-0.5 shrink-0">•</span>
+              <span>{line.slice(1).trim()}</span>
+            </div>
+          );
+        }
+        if (line.trim() === 'Do you need further clarification?') {
+          return (
+            <p key={i} className="text-[#A78BFA] text-xs mt-2 italic">
+              {line.trim()}
+            </p>
+          );
+        }
+        return <p key={i}>{line}</p>;
+      })}
+    </div>
+  );
+}
 
 export default function StrategicAdvisor() {
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: "ai",
-      text: "Hello! I am your Strategic Advisor. Based on the current data, revenue is projected to grow. How can I help you optimize your operations today?",
+      text: "I have all I need, how can I help you optimize your operations today?",
     },
   ]);
   const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // NEW: Track if AI is thinking
 
   const messagesEndRef = useRef(null);
 
-  // Function to smoothly scroll the messages container to the bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Effect to trigger scroll only when new messages are added
   useEffect(() => {
-    if (messages.length > 1) {
-      scrollToBottom();
-    }
-  }, [messages]);
+    scrollToBottom();
+  }, [messages, isLoading]); // Scroll when messages OR loading status change
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
-    setMessages([
-      ...messages,
-      { id: Date.now(), sender: "user", text: inputValue },
-    ]);
+  // UPDATED: Function to talk to the Backend
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage = { id: Date.now(), sender: "user", text: inputValue };
+    
+    // 1. Add user message to screen
+    setMessages(prev => [...prev, userMessage]);
+    const queryToSend = inputValue;
     setInputValue("");
+    setIsLoading(true); // Start loading
+
+    try {
+      const response = await fetch("http://localhost:5000/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+            query: queryToSend,
+            context: "insight_page" 
+        }),
+      });
+    
+      const data = await response.json();
+    
+      if (data.status === "success") {
+        setMessages(prev => [
+          ...prev,
+          { id: Date.now() + 1, sender: "ai", text: data.output }
+        ]);
+      } else {
+        // Show the error message from the backend
+        setMessages(prev => [
+          ...prev,
+          { 
+            id: Date.now() + 1, 
+            sender: "ai", 
+            text: `Backend error: ${data.message || "Unknown error"}` 
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now() + 1, sender: "ai", text: "Cannot reach the server. Make sure Flask is running on port 5000." }
+      ]);
+    }
   };
 
   return (
@@ -44,7 +124,6 @@ export default function StrategicAdvisor() {
 
       {/* Chat History Container */}
       <div className="flex-1 relative min-h-[300px]">
-        {/* Using absolute positioning to contain the overflow within the parent height */}
         <div className="absolute inset-0 p-6 overflow-y-auto space-y-4 scroll-smooth">
           {messages.map((msg) => (
             <div
@@ -54,15 +133,24 @@ export default function StrategicAdvisor() {
               <div
                 className={`max-w-[85%] p-4 rounded-xl text-sm leading-relaxed ${
                   msg.sender === "user"
-                    ? "bg-[#8B5CF6] text-white rounded-tr-none shadow-md"
+                    ? "bg-[#8B5CF6] text-white rounded-tr-none shadow-md whitespace-pre-wrap"
                     : "bg-[#374151] text-slate-200 border border-[#7F92BB]/20 rounded-tl-none shadow-sm"
                 }`}
               >
-                {msg.text}
+                {msg.sender === "ai" ? <AiMessage text={msg.text} /> : msg.text}
               </div>
             </div>
           ))}
-          {/* Invisible anchor element to serve as the scroll target */}
+
+          {/* NEW: Loading Indicator */}
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="bg-[#374151] text-slate-400 p-4 rounded-xl text-xs animate-pulse border border-[#7F92BB]/10">
+                Working hard on it...
+              </div>
+            </div>
+          )}
+          
           <div ref={messagesEndRef} className="h-1" />
         </div>
       </div>
@@ -72,29 +160,20 @@ export default function StrategicAdvisor() {
         <div className="relative flex items-center">
           <input
             type="text"
+            disabled={isLoading} // Disable input while AI thinks
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            placeholder="Ask anything..."
-            autoComplete="off" // Disables browser autofill to prevent focus triggers
-            className="w-full bg-[#374151] border border-[#7F92BB]/30 rounded-xl py-3.5 pl-4 pr-14 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#8B5CF6] transition-colors"
+            placeholder={isLoading ? "Please wait..." : "Ask anything..."}
+            className={`w-full bg-[#374151] border border-[#7F92BB]/30 rounded-xl py-3.5 pl-4 pr-14 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-[#8B5CF6] transition-colors ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
           />
           <button
             onClick={handleSend}
-            className="absolute right-2 p-2 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-lg transition-colors active:scale-95"
+            disabled={isLoading}
+            className={`absolute right-2 p-2 bg-[#8B5CF6] hover:bg-[#7C3AED] text-white rounded-lg transition-colors active:scale-95 ${isLoading ? 'opacity-50' : ''}`}
           >
-            <svg
-              className="w-4 h-4 transform rotate-45"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-              ></path>
+            <svg className="w-4 h-4 transform rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
             </svg>
           </button>
         </div>
