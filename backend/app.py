@@ -1,3 +1,5 @@
+#backend/app.py
+
 from flask import Flask
 from flask_cors import CORS
 from routes.chat_routes import chat_bp
@@ -7,7 +9,7 @@ from routes.report_routes import report_bp
 from routes.smart_draft_routes import smart_draft_bp
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 
 
 # Register blueprints
