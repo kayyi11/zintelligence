@@ -117,6 +117,21 @@ export default function Dashboard() {
   const top3 = metrics?.top_3_products ?? [];
   const productRevenue = metrics?.product_revenue ?? {};
 
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[70vh] space-y-6">
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-[#7F92BB]/20"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-[#34D399] animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center text-3xl">📊</div>
+        </div>
+        <div className="text-center space-y-2">
+          <p className="text-white text-xl font-bold">Crunching the numbers...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Header */}
